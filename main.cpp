@@ -1,42 +1,74 @@
-#include <glad/glad.h>
+#include <cstdlib>
+#include <cstdio>
+#include <ctime>
+
+#include <glad/egl.h>
+#include <glad/gles2.h>
+
+#define GLFW_INCLUDE_NONE 1
 #include <GLFW/glfw3.h>
-#include <iostream>
 
-int main() {
-    GLFWwindow* window;
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#else
+#define GLFW_EXPOSE_NATIVE_EGL 1
+  #include <GLFW/glfw3native.h>
+#endif
 
-    /* Initialize the library */
-    if (!glfwInit())
-        return -1;
+const GLuint WIDTH = 800, HEIGHT = 600;
 
-    /* Create a windowed mode window and its OpenGL context */
-    window = glfwCreateWindow(640, 480, "Hello World", nullptr, nullptr);
-    if (!window)
-    {
-        glfwTerminate();
-        return -1;
-    }
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode) {
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, GL_TRUE);
+}
 
-    /* Make the window's context current */
+void render_frame(GLFWwindow *window) {
+    glfwPollEvents();
+
+    glClearColor(0.7f, 0.9f, 0.1f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glfwSwapBuffers(window);
+}
+
+int main(int argc, char **argv) {
+    glfwInit();
+    srand(time(nullptr));
+
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+    glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
+    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+
+    GLFWwindow* window = glfwCreateWindow(800, 600, "[glad] EGL with GLFW", nullptr, nullptr);
     glfwMakeContextCurrent(window);
 
-    if(!gladLoadGL()) {
-        std::cout << "aboba" << std::endl;
+//    glfwSetKeyCallback(window, key_callback);
+
+#ifndef __EMSCRIPTEN__
+    /* Load EGL */
+    EGLDisplay display = glfwGetEGLDisplay();
+    int egl_version = gladLoaderLoadEGL(display);
+    printf("EGL %d.%d\n", GLAD_VERSION_MAJOR(egl_version), GLAD_VERSION_MINOR(egl_version));
+#endif
+
+    /* Load GLES */
+    int gles_version = 0;
+    if (rand() % 100 < 50) {
+        printf("-> using GLFW to load GLES2\n");
+        gles_version = gladLoadGLES2(glfwGetProcAddress);
+    } else {
+        printf("-> using GLAD loader to load GLES2\n");
+        gles_version = gladLoaderLoadGLES2();
     }
+    printf("GLES %d.%d\n", GLAD_VERSION_MAJOR(gles_version), GLAD_VERSION_MINOR(gles_version));
 
-    /* Loop until the user closes the window */
-    while (!glfwWindowShouldClose(window))
-    {
-        glClear(GL_COLOR_BUFFER_BIT);
-        /* Render here */
-        glClearColor(1.0, 0.0, 1.0, 0.0);
-
-        /* Swap front and back buffers */
-        glfwSwapBuffers(window);
-
-        /* Poll for and process events */
-        glfwPollEvents();
-    }
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop_arg((em_arg_callback_func) render_frame, window, 60, 1);
+#else
+    while (!glfwWindowShouldClose(window)) { render_frame(window); }
+#endif
 
     glfwTerminate();
     return 0;
