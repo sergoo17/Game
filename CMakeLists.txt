@@ -17,7 +17,7 @@ set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 
 if (EMSCRIPTEN)
     set_target_properties(${PROJECT_NAME} PROPERTIES
-            SUFFIX ".html"
+            SUFFIX ".js"
             RUNTIME_OUTPUT_DIRECTORY ../build
             LINK_FLAGS " --bind -s WASM=1 -O3 -g3 -flto -s ASSERTIONS=2 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=1 -s MIN_WEBGL_VERSION=1 -s ABORT_ON_WASM_EXCEPTIONS=1 -g2 -s USE_GLFW=3"
     )
